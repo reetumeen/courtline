@@ -2,8 +2,14 @@ const express = require('express');
 const router = express.Router();
 const courtController = require('../controllers/courtController');
 
+// POST /courtbooking – save booking form details and redirect to payment
+router.post('/courtbooking', courtController.saveCourtBooking);
+
 // GET /courts – list active courts (+filters: sport)
 router.get('/courts', courtController.listCourts);
+
+// POST /courts – add a single court
+router.post('/courts', courtController.addCourt);
 
 // GET /courts/:id – details
 router.get('/courts/:id', courtController.getCourtDetails);

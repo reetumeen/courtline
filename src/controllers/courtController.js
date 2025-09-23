@@ -82,10 +82,56 @@ async function releaseSlots(req, res) {
     }
 }
 
+// POST /courts – add a single court
+async function addCourt(req, res) {
+    try {
+        const db = await connectDB();
+        const { name, sport, location, active } = req.body;
+        if (!name || !sport || !location) {
+            return res.status(400).json({ error: 'name, sport, and location are required' });
+        }
+        const court = {
+            name,
+            sport,
+            location,
+            active: active !== undefined ? active : true,
+            createdAt: new Date()
+        };
+        const result = await db.collection('courts').insertOne(court);
+        res.status(201).json({ message: 'Court added', courtId: result.insertedId });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+}
+
+// POST /courtbooking – save booking form details and redirect to payment
+const CourtBookingUser = require('../models/CourtBookingUser');
+async function saveCourtBooking(req, res) {
+    try {
+        const { name, phone, email, slots, totalAmount } = req.body;
+        if (!name || !phone || !email || !slots || !totalAmount) {
+            return res.status(400).json({ error: 'name, phone, email, slots, and totalAmount are required' });
+        }
+        const booking = new CourtBookingUser({
+            name,
+            phone,
+            email,
+            slots,
+            totalAmount
+        });
+        const savedBooking = await booking.save();
+        res.status(201).json({ message: 'Booking saved', bookingId: savedBooking._id, redirectUrl: '/payment' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+}
+
 module.exports = {
     listCourts,
     getCourtDetails,
     getSlotsAvailability,
     holdSlots,
-    releaseSlots
+    releaseSlots,
+    addCourt,
+    saveCourtBooking
 };
