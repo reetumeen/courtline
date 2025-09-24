@@ -108,11 +108,12 @@ async function addCourt(req, res) {
 const CourtBookingUser = require('../models/CourtBookingUser');
 async function saveCourtBooking(req, res) {
     try {
-        const { name, phone, email, slots, totalAmount } = req.body;
-        if (!name || !phone || !email || !slots || !totalAmount) {
-            return res.status(400).json({ error: 'name, phone, email, slots, and totalAmount are required' });
+        const { userId, name, phone, email, slots, totalAmount } = req.body;
+        if (!userId || !name || !phone || !email || !slots || !totalAmount) {
+            return res.status(400).json({ error: 'userId, name, phone, email, slots, and totalAmount are required' });
         }
         const booking = new CourtBookingUser({
+            userId,
             name,
             phone,
             email,
