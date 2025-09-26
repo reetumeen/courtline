@@ -5,8 +5,9 @@ const courtController = require('../controllers/courtController');
 // POST /send-booking-email – send booking confirmation email
 router.post('/send-booking-email', emailController.sendBookingEmail);
 
+const auth = require('../middleware/authMiddleware');
 // POST /courtbooking – save booking form details and redirect to payment
-router.post('/courtbooking', courtController.saveCourtBooking);
+router.post('/courtbooking', auth, courtController.saveCourtBooking);
 
 // GET /courts – list active courts (+filters: sport)
 router.get('/courts', courtController.listCourts);
@@ -34,3 +35,10 @@ router.post('/create-order', paymentController.createOrder);
 router.post('/verify-payment', paymentController.verifyPayment);
 
 module.exports = router;
+
+
+
+    // "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4ZDI1OTM0ODNlODhmNGU3MzZkZjBmNCIsImlhdCI6MTc1ODcwOTgyOSwiZXhwIjoxNzU4Nzk2MjI5fQ.8Lw2K3kgYtu3nMxGhGxvGQrbDdQKkcH1MSI84GnML2w",
+//   "message": "Booking saved",
+//     "bookingId": "68d3c8dd7be32889c4f05a5e",
+//     "redirectUrl": "/payment"

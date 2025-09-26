@@ -1,5 +1,9 @@
 const { ObjectId } = require('mongodb');
 const { connectDB } = require('../config/db');
+const CourtBookingUser = require('../models/CourtBookingUser');
+
+
+
 
 // GET /courts – list active courts (+filters: sport)
 async function listCourts(req, res) {
@@ -105,12 +109,12 @@ async function addCourt(req, res) {
 }
 
 // POST /courtbooking – save booking form details and redirect to payment
-const CourtBookingUser = require('../models/CourtBookingUser');
 async function saveCourtBooking(req, res) {
     try {
-        const { userId, name, phone, email, slots, totalAmount } = req.body;
-        if (!userId || !name || !phone || !email || !slots || !totalAmount) {
-            return res.status(400).json({ error: 'userId, name, phone, email, slots, and totalAmount are required' });
+        const userId = req.user.id;
+        const { name, phone, email, slots, totalAmount } = req.body;
+        if (!name || !phone || !email || !slots || !totalAmount) {
+            return res.status(400).json({ error: 'name, phone, email, slots, and totalAmount are required' });
         }
         const booking = new CourtBookingUser({
             userId,
