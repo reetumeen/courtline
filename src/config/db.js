@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const uri = process.env.MONGO_URI || 'mongodb+srv://reetumeen10:<wQutbMJsjPeJjzcc>@cluster1.frfivz0.mongodb.net/courtline?retryWrites=true&w=majority&appName=Cluster1';
+const uri = process.env.MONGO_URI || 'mongodb+srv://reetumeen10:reetucourtline10@cluster1.frfivz0.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1'
 
 async function connectDB() {
 	try {
