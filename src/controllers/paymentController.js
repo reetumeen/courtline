@@ -6,10 +6,10 @@ const CourtSlot = require('../models/CourtSlot');
 
 
 
-// Demo Razorpay keys (replace with owner key in production)
+// Use environment variables for Razorpay keys
 const razorpay = new Razorpay({
-  key_id: 'rzp_test_1DP5mmOlF5G5ag',
-  key_secret: 'your_demo_secret'
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
 // POST /create-order
@@ -40,12 +40,13 @@ exports.createOrder = async (req, res) => {
         return res.status(409).json({ error: `Slot unavailable: ${slot.date} ${slot.time} ${slot.court}` });
       }
     }
-    for (const slot of booking.slots) {
-      await CourtSlot.updateOne(
+    // Lock slots as pending in parallel for better performance
+    await Promise.all(booking.slots.map(slot =>
+      CourtSlot.updateOne(
         { date: slot.date, time: slot.time, court: slot.court, status: 'available' },
         { $set: { status: 'pending', pendingBy: userId, pendingAt: new Date() } }
-      );
-    }
+      )
+    ));
 
     const options = {
       amount: amount * 100, // Razorpay expects amount in paise
@@ -107,12 +108,13 @@ exports.verifyPayment = async (req, res) => {
     }
 
     // Mark slots as booked
-    for (const slot of booking.slots) {
-      await CourtSlot.updateOne(
+    // Mark slots as booked in parallel for better performance
+    await Promise.all(booking.slots.map(slot =>
+      CourtSlot.updateOne(
         { date: slot.date, time: slot.time, court: slot.court, status: 'available' },
         { $set: { status: 'booked', bookedBy: userId, bookedAt: new Date() } }
-      );
-    }
+      )
+    ));
 
     // Save payment info
     const payment = new Payment({

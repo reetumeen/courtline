@@ -1,120 +1,121 @@
-const { ObjectId } = require('mongodb');
-const { connectDB } = require('../config/db');
+
+const Court = require('../models/Court');
+const CourtSlot = require('../models/CourtSlot');
 const CourtBookingUser = require('../models/CourtBookingUser');
 
 
 
 
+
 // GET /courts – list active courts (+filters: sport)
-async function listCourts(req, res) {
+exports.listCourts = async (req, res) => {
     try {
-        const db = await connectDB();
         const filter = { active: true };
         if (req.query.sport) {
             filter.sport = req.query.sport;
         }
-        const courts = await db.collection('courts').find(filter).toArray();
-        res.json(courts);
+        const courts = await Court.find(filter);
+        return res.status(200).json({ success: true, data: courts });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        return res.status(500).json({ success: false, error: err.message });
     }
-}
+};
+
 
 // GET /courts/:id – details
-async function getCourtDetails(req, res) {
+exports.getCourtDetails = async (req, res) => {
     try {
-        const db = await connectDB();
-        const court = await db.collection('courts').findOne({ _id: new ObjectId(req.params.id) });
-        if (!court) return res.status(404).json({ error: 'Court not found' });
-        res.json(court);
+        const court = await Court.findById(req.params.id);
+        if (!court) return res.status(404).json({ success: false, error: 'Court not found' });
+        return res.status(200).json({ success: true, data: court });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        return res.status(500).json({ success: false, error: err.message });
     }
-}
+};
+
 
 // GET /slots/availability – query by date (and optional court_id)
-async function getSlotsAvailability(req, res) {
+exports.getSlotsAvailability = async (req, res) => {
     try {
-        const db = await connectDB();
         const { date, court_id } = req.query;
-        if (!date) return res.status(400).json({ error: 'date is required' });
-        const filter = { date };
-        if (court_id) filter.court_id = court_id;
-        filter.status = 'available';
-        const slots = await db.collection('inventory_slots').find(filter).toArray();
-        res.json(slots);
+        if (!date) return res.status(400).json({ success: false, error: 'date is required' });
+        const filter = { date, status: 'available' };
+        if (court_id) filter.court = court_id;
+        const slots = await CourtSlot.find(filter);
+        return res.status(200).json({ success: true, data: slots });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        return res.status(500).json({ success: false, error: err.message });
     }
-}
+};
+
 
 // POST /slots/hold – hold one/many inventory_slot_ids for N minutes
-async function holdSlots(req, res) {
+exports.holdSlots = async (req, res) => {
     try {
-        const db = await connectDB();
         const { inventory_slot_ids, minutes, cart_id } = req.body;
         if (!inventory_slot_ids || !minutes || !cart_id) {
-            return res.status(400).json({ error: 'inventory_slot_ids, minutes, and cart_id are required' });
+            return res.status(400).json({ success: false, error: 'inventory_slot_ids, minutes, and cart_id are required' });
         }
         const now = new Date();
         const holdUntil = new Date(now.getTime() + minutes * 60000);
-        await db.collection('inventory_slots').updateMany(
-            { _id: { $in: inventory_slot_ids.map(id => new ObjectId(id)) }, status: 'available' },
+        await CourtSlot.updateMany(
+            { _id: { $in: inventory_slot_ids }, status: 'available' },
             { $set: { status: 'held', holdUntil, cart_id } }
         );
-        res.json({ success: true });
+        return res.status(200).json({ success: true });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        return res.status(500).json({ success: false, error: err.message });
     }
-}
+};
+
 
 // POST /slots/release – release held slots
-async function releaseSlots(req, res) {
+exports.releaseSlots = async (req, res) => {
     try {
-        const db = await connectDB();
         const { inventory_slot_ids, cart_id } = req.body;
         if (!inventory_slot_ids || !cart_id) {
-            return res.status(400).json({ error: 'inventory_slot_ids and cart_id are required' });
+            return res.status(400).json({ success: false, error: 'inventory_slot_ids and cart_id are required' });
         }
-        await db.collection('inventory_slots').updateMany(
-            { _id: { $in: inventory_slot_ids.map(id => new ObjectId(id)) }, status: 'held', cart_id },
+        await CourtSlot.updateMany(
+            { _id: { $in: inventory_slot_ids }, status: 'held', cart_id },
             { $set: { status: 'available' }, $unset: { holdUntil: '', cart_id: '' } }
         );
-        res.json({ success: true });
+        return res.status(200).json({ success: true });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        return res.status(500).json({ success: false, error: err.message });
     }
-}
+};
+
 
 // POST /courts – add a single court
-async function addCourt(req, res) {
+exports.addCourt = async (req, res) => {
     try {
-        const db = await connectDB();
         const { name, sport, location, active } = req.body;
         if (!name || !sport || !location) {
-            return res.status(400).json({ error: 'name, sport, and location are required' });
+            return res.status(400).json({ success: false, error: 'name, sport, and location are required' });
         }
-        const court = {
+        const court = new Court({
             name,
             sport,
             location,
             active: active !== undefined ? active : true,
             createdAt: new Date()
-        };
-        const result = await db.collection('courts').insertOne(court);
-        res.status(201).json({ message: 'Court added', courtId: result.insertedId });
+        });
+        const savedCourt = await court.save();
+        return res.status(201).json({ success: true, data: savedCourt });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        return res.status(500).json({ success: false, error: err.message });
     }
-}
+};
+
 
 // POST /courtbooking – save booking form details and redirect to payment
-async function saveCourtBooking(req, res) {
+exports.saveCourtBooking = async (req, res) => {
     try {
         const userId = req.user.id;
         const { name, phone, email, slots, totalAmount } = req.body;
         if (!name || !phone || !email || !slots || !totalAmount) {
-            return res.status(400).json({ error: 'name, phone, email, slots, and totalAmount are required' });
+            return res.status(400).json({ success: false, error: 'name, phone, email, slots, and totalAmount are required' });
         }
         const booking = new CourtBookingUser({
             userId,
@@ -125,18 +126,11 @@ async function saveCourtBooking(req, res) {
             totalAmount
         });
         const savedBooking = await booking.save();
-        res.status(201).json({ message: 'Booking saved', bookingId: savedBooking._id, redirectUrl: '/payment' });
+        return res.status(201).json({ success: true, data: { bookingId: savedBooking._id, redirectUrl: '/payment' } });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        return res.status(500).json({ success: false, error: err.message });
     }
-}
-
-module.exports = {
-    listCourts,
-    getCourtDetails,
-    getSlotsAvailability,
-    holdSlots,
-    releaseSlots,
-    addCourt,
-    saveCourtBooking
 };
+
+
+

@@ -1,14 +1,14 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
+const helmet = require('helmet');
 const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoutes');
 const courtRoutes = require('./routes/courtRoutes');
 const app = express();
 
 // Middleware
+app.use(helmet());
 app.use(cors());
-app.use(bodyParser.json());
 app.use(express.json());
 
 // Example route
